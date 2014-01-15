@@ -7,6 +7,7 @@ import Control.Monad.Writer
 import Data.Maybe
 import qualified Data.Map as Map
 
+type Eval a = Identity a
 type Name   = String
 data Exp    = Lit Integer
             | Var Name
@@ -19,15 +20,18 @@ data Value  = IntVal Integer
             deriving (Show)
 type Env    = Map.Map Name Value 
 
-eval :: Env -> Exp -> Value
-eval env (Lit i) = IntVal i
-eval env (Var n) = fromJust $ Map.lookup n env
-eval env (Plus e1 e2) = let IntVal i1 = eval env e1
-                            IntVal i2 = eval env e2
-                        in IntVal (i1 + i2)
-eval env (Abs n e) = FunVal env n e
-eval env (App e1 e2) = let val1 = eval env e1
-                           val2 = eval env e2
-                       in case val1 of
-                           FunVal env' n body -> eval (Map.insert n val2 env') body
+runEval :: Eval a -> a
+runEval = runIdentity
+
+eval :: Env -> Exp -> Eval Value
+eval env (Lit i) = return $ IntVal i
+eval env (Var n) = maybe (fail $ "undefined value: " ++ n) return $ Map.lookup n env
+eval env (Plus e1 e2) = do IntVal i1 <- eval env e1
+                           IntVal i2 <- eval env e2
+                           return $ IntVal (i1 + i2)
+eval env (Abs n e) = return $ FunVal env n e
+eval env (App e1 e2) = do val1 <- eval env e1
+                          val2 <- eval env e2
+                          case val1 of
+                              FunVal env' n body -> eval (Map.insert n val2 env') body
 
