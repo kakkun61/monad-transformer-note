@@ -7,7 +7,7 @@ import Control.Monad.Writer
 import Data.Maybe
 import qualified Data.Map as Map
 
-type Eval a = Identity a
+type Eval a = ErrorT String Identity a
 type Name   = String
 data Exp    = Lit Integer
             | Var Name
@@ -20,8 +20,8 @@ data Value  = IntVal Integer
             deriving (Show)
 type Env    = Map.Map Name Value 
 
-runEval :: Eval a -> a
-runEval = runIdentity
+runEval :: Eval a -> Either String a
+runEval = runIdentity . runErrorT
 
 eval :: Env -> Exp -> Eval Value
 eval env (Lit i) = return $ IntVal i
