@@ -7,7 +7,7 @@ import Control.Monad.Writer
 import Data.Maybe
 import qualified Data.Map as Map
 
-type Eval a = ReaderT Env (ErrorT String (WriterT [String] (StateT Integer Identity))) a
+type Eval a = ReaderT Env (ErrorT String (WriterT [String] (StateT Integer IO))) a
 type Name   = String
 data Exp    = Lit Integer
             | Var Name
@@ -20,11 +20,12 @@ data Value  = IntVal Integer
             deriving (Show)
 type Env    = Map.Map Name Value 
 
-runEval :: Env -> Integer -> Eval a -> ((Either String a, [String]), Integer)
-runEval env st ev = runIdentity $ runStateT (runWriterT (runErrorT $ runReaderT ev env)) st
+runEval :: Env -> Integer -> Eval a -> IO ((Either String a, [String]), Integer)
+runEval env st ev = runStateT (runWriterT (runErrorT $ runReaderT ev env)) st
 
 eval :: Exp -> Eval Value
 eval (Lit i) = do tick
+                  liftIO $ print i
                   return $ IntVal i
 eval (Var n) = do tick
                   env <- ask
